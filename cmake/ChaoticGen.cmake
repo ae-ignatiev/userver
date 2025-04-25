@@ -252,6 +252,13 @@ function(userver_target_generate_openapi_client TARGET)
 endfunction()
 
 function(userver_target_generate_chaotic_dynamic_configs TARGET SCHEMAS_REGEX)
+  set(OPTIONS)
+  set(ONE_VALUE_ARGS INSTALL_INCLUDES_COMPONENT)
+  set(MULTI_VALUE_ARGS)
+  cmake_parse_arguments(
+      PARSE "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN}
+  )
+
   file(GLOB CHGEN_FILENAMES ${SCHEMAS_REGEX})
   set(OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/dynamic_configs)
 
@@ -262,19 +269,20 @@ function(userver_target_generate_chaotic_dynamic_configs TARGET SCHEMAS_REGEX)
 
   _userver_initialize_codegen_flag()
 
+  set(OUTPUT_PREFIX "dynamic_config/variables")
   set(OUTPUT_FILENAMES)
   set(CONFIG_NAMES)
-  foreach(FILENAME ${CHGEN_FILENAMES}) 
+  foreach(FILENAME ${CHGEN_FILENAMES})
     string(REGEX REPLACE "^(.*)/([^/]*)\\.([^.]*)\$" "\\2" SCHEMA "${FILENAME}")
     set(CONFIG_NAMES "${CONFIG_NAMES} ${SCHEMA}")
 
     list(APPEND OUTPUT_FILENAMES
-         ${OUTPUT_DIR}/include/dynamic_config/variables/${SCHEMA}.types_fwd.hpp
-         ${OUTPUT_DIR}/include/dynamic_config/variables/${SCHEMA}.types.hpp
-         ${OUTPUT_DIR}/include/dynamic_config/variables/${SCHEMA}.types_parsers.ipp
-         ${OUTPUT_DIR}/include/dynamic_config/variables/${SCHEMA}.hpp
-         ${OUTPUT_DIR}/src/dynamic_config/variables/${SCHEMA}.types.cpp
-         ${OUTPUT_DIR}/src/dynamic_config/variables/${SCHEMA}.cpp
+         ${OUTPUT_DIR}/include/${OUTPUT_PREFIX}/${SCHEMA}.types_fwd.hpp
+         ${OUTPUT_DIR}/include/${OUTPUT_PREFIX}/${SCHEMA}.types.hpp
+         ${OUTPUT_DIR}/include/${OUTPUT_PREFIX}/${SCHEMA}.types_parsers.ipp
+         ${OUTPUT_DIR}/include/${OUTPUT_PREFIX}/${SCHEMA}.hpp
+         ${OUTPUT_DIR}/src/${OUTPUT_PREFIX}/${SCHEMA}.types.cpp
+         ${OUTPUT_DIR}/src/${OUTPUT_PREFIX}/${SCHEMA}.cpp
     )
   endforeach()
 
@@ -302,4 +310,19 @@ function(userver_target_generate_chaotic_dynamic_configs TARGET SCHEMAS_REGEX)
   add_library("${TARGET}" STATIC ${OUTPUT_FILENAMES})
   target_link_libraries("${TARGET}" userver::core userver::chaotic)
   target_include_directories("${TARGET}" PUBLIC "$<BUILD_INTERFACE:${OUTPUT_DIR}/include>")
+
+  if(PARSE_INSTALL_INCLUDES_COMPONENT)
+    foreach(FILE ${OUTPUT_FILENAMES})
+      string(REGEX REPLACE "^(.*)\\.([^.]*)\$" "\\2" SUFFIX "${FILE}")
+      if(SUFFIX STREQUAL cpp)
+        continue()
+      endif()
+
+      _userver_directory_install(
+          COMPONENT ${PARSE_INSTALL_INCLUDES_COMPONENT}
+          FILES "${FILE}"
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/userver/${OUTPUT_PREFIX}"
+      )
+    endforeach()
+  endif()
 endfunction()
