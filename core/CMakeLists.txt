@@ -228,6 +228,8 @@ target_include_directories(${PROJECT_NAME}
 userver_target_generate_chaotic_dynamic_configs(
     ${PROJECT_NAME}-dynamic-configs
     dynamic_configs/*.yaml
+    INSTALL_INCLUDES_COMPONENT
+      core
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}-dynamic-configs)
 
